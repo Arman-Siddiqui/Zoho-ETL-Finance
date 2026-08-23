@@ -1,4 +1,4 @@
-name: Python CI
+name: Python CI/CD
 
 on:
   push:
@@ -10,10 +10,16 @@ on:
       - main
 
 jobs:
+
+  # =========================
+  # CI - TEST ON UBUNTU
+  # =========================
   test-python:
+    name: CI - Python Tests
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Checkout code
         uses: actions/checkout@v6
 
@@ -32,3 +38,24 @@ jobs:
           python --version
           echo "Runner OS:"
           uname -a
+
+
+  # =========================
+  # CD - TEST WINDOWS VM
+  # =========================
+  deploy-test:
+    name: CD - Windows VM Test
+    needs: test-python
+    runs-on: self-hosted
+
+    steps:
+
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Test Windows VM Runner
+        run: |
+          echo "CD is running on my Windows VM"
+          python --version
+          hostname
+          echo "Windows VM runner is working successfully"
