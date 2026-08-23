@@ -41,21 +41,50 @@ jobs:
 
 
   # =========================
-  # CD - TEST WINDOWS VM
+  # CD - DEPLOY TO TEST
   # =========================
   deploy-test:
-    name: CD - Windows VM Test
+    name: CD - Deploy to TEST
     needs: test-python
     runs-on: self-hosted
 
     steps:
 
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Test Windows VM Runner
+      - name: Deploy code to TEST
+        shell: powershell
         run: |
-          echo "CD is running on my Windows VM"
-          python --version
-          hostname
-          echo "Windows VM runner is working successfully"
+          $testPath = "C:\Users\Administrator\Desktop\Zoho books\Zoho python code\Financial_DB_TEST"
+
+          Write-Host "TEST path: $testPath"
+
+          if (-not (Test-Path $testPath)) {
+              New-Item -ItemType Directory -Path $testPath -Force
+          }
+
+          if (-not (Test-Path "$testPath\.git")) {
+
+              Write-Host "TEST folder is not a Git repository."
+              Write-Host "Cloning repository into TEST..."
+
+              git clone "https://github.com/Arman-Siddiqui/Zoho-ETL-Finance.git" $testPath
+
+          }
+          else {
+
+              Write-Host "TEST folder already contains Git repository."
+              Write-Host "Updating TEST from GitHub..."
+
+              git -C $testPath fetch origin
+              git -C $testPath reset --hard origin/main
+
+          }
+
+          Write-Host "================================="
+          Write-Host "TEST deployment completed"
+          Write-Host "================================="
+
+          Write-Host "Latest commit:"
+          git -C $testPath log -1 --oneline
+
+          Write-Host "Files in TEST:"
+          Get-ChildItem $testPath
