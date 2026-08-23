@@ -9,13 +9,14 @@ on:
     branches:
       - main
 
+
 jobs:
 
-  # =========================
-  # CI - TEST ON UBUNTU
-  # =========================
+  # ==========================================================
+  # 1. CI - RUN ON GITHUB UBUNTU
+  # ==========================================================
   test-python:
-    name: CI - Python Tests
+    name: CI - Python Test
     runs-on: ubuntu-latest
 
     steps:
@@ -32,59 +33,106 @@ jobs:
         run: |
           python -m py_compile "Account Trnx.py"
 
-      - name: Test Ubuntu Runner
-        run: |
-          echo "CI is running successfully on Ubuntu"
-          python --version
-          echo "Runner OS:"
-          uname -a
 
-
-  # =========================
-  # CD - DEPLOY TO TEST
-  # =========================
+  # ==========================================================
+  # 2. CD - DEPLOY TO TEST
+  # ==========================================================
   deploy-test:
     name: CD - Deploy to TEST
+
     needs: test-python
-    runs-on: self-hosted
+
+    # Deploy only when code is actually pushed to main.
+    # Do NOT deploy Pull Requests to TEST.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    runs-on: [self-hosted, Windows, X64]
 
     steps:
 
-      - name: Deploy code to TEST
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Deploy to TEST
         shell: powershell
         run: |
-          $testPath = "C:\Users\Administrator\Desktop\Zoho books\Zoho python code\Financial_DB_TEST"
 
-          Write-Host "TEST path: $testPath"
+          $source = $env:GITHUB_WORKSPACE
 
-          if (-not (Test-Path $testPath)) {
-              New-Item -ItemType Directory -Path $testPath -Force
+          $destination = "C:\Users\Administrator\Desktop\Zoho books\Zoho python code\Financial_DB_TEST"
+
+          Write-Host "=========================================="
+          Write-Host "DEPLOYING TO TEST"
+          Write-Host "=========================================="
+
+          Write-Host "Source:"
+          Write-Host $source
+
+          Write-Host "Destination:"
+          Write-Host $destination
+
+          # Create TEST folder if it does not exist
+          if (!(Test-Path $destination)) {
+              New-Item -ItemType Directory -Path $destination -Force
           }
 
-          if (-not (Test-Path "$testPath\.git")) {
+          # Copy repository files to TEST
+          Get-ChildItem -Path $source -Force |
+              Where-Object { $_.Name -ne ".git" } |
+              Copy-Item -Destination $destination -Recurse -Force
 
-              Write-Host "TEST folder is not a Git repository."
-              Write-Host "Cloning repository into TEST..."
+          Write-Host "=========================================="
+          Write-Host "TEST DEPLOYMENT COMPLETED"
+          Write-Host "=========================================="
 
-              git clone "https://github.com/Arman-Siddiqui/Zoho-ETL-Finance.git" $testPath
 
+  # ==========================================================
+  # 3. CD - DEPLOY TO PRODUCTION
+  # ==========================================================
+  deploy-production:
+    name: CD - Deploy to PROD
+
+    needs: deploy-test
+
+    # Connect this job to GitHub's production Environment.
+    environment:
+      name: production
+
+    runs-on: [self-hosted, Windows, X64]
+
+    steps:
+
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Deploy to PROD
+        shell: powershell
+        run: |
+
+          $source = $env:GITHUB_WORKSPACE
+
+          $destination = "C:\Users\Administrator\Desktop\Zoho books\Zoho python code\Financial_DB_PROD"
+
+          Write-Host "=========================================="
+          Write-Host "DEPLOYING TO PRODUCTION"
+          Write-Host "=========================================="
+
+          Write-Host "Source:"
+          Write-Host $source
+
+          Write-Host "Destination:"
+          Write-Host $destination
+
+          # Create PROD folder if it does not exist
+          if (!(Test-Path $destination)) {
+              New-Item -ItemType Directory -Path $destination -Force
           }
-          else {
 
-              Write-Host "TEST folder already contains Git repository."
-              Write-Host "Updating TEST from GitHub..."
+          # Copy repository files to PROD
+          Get-ChildItem -Path $source -Force |
+              Where-Object { $_.Name -ne ".git" } |
+              Copy-Item -Destination $destination -Recurse -Force
 
-              git -C $testPath fetch origin
-              git -C $testPath reset --hard origin/main
-
-          }
-
-          Write-Host "================================="
-          Write-Host "TEST deployment completed"
-          Write-Host "================================="
-
-          Write-Host "Latest commit:"
-          git -C $testPath log -1 --oneline
-
-          Write-Host "Files in TEST:"
-          Get-ChildItem $testPath
+          Write-Host "=========================================="
+          Write-Host "PRODUCTION DEPLOYMENT COMPLETED"
+          Write-Host "=========================================="
