@@ -25,3 +25,10 @@ jobs:
       - name: Check Python syntax
         run: |
           python -m py_compile "Account Trnx.py"
+
+      - name: Test Ubuntu Runner
+        run: |
+          echo "CI is running successfully on Ubuntu"
+          python --version
+          echo "Runner OS:"
+          uname -a
