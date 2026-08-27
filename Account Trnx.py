@@ -452,4 +452,3 @@ conn.close()
 print("THIS IS A BROKEN VERSION")
 # PRACTICE CHANGE - Git to GitHub
 print("GitHub practice change")
-# CI/CD pipeline test - 27 August 2026
